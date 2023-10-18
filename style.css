@@ -1,0 +1,37 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.minesweeper {
+    text-align: center;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(20, 30px);
+    gap: 1px;
+}
+
+.cell {
+    width: 30px;
+    height: 30px;
+    background: #ccc;
+    border: 1px solid #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.cell.revealed {
+    background: #ddd;
+}
+
+
+#reset {
+    margin-top: 20px;
+}
