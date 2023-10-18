@@ -4,7 +4,7 @@ const resetButton = document.getElementById("reset");
 const rows = 20;
 const columns = 20;
 const totalCells = rows * columns;
-const mines = 80;
+const mines = 380;
 let cells = [];
 let minesPlaced = false;
 let minesCount = 0;
@@ -107,7 +107,10 @@ const checkForWin = () => {
     }
     if (allCellsRevealed) {
         alert("You won!");
+        setHighscore(updateTime(false) || '');
+        return true;
     }
+    return false;
 };
 const markCell = (row, col) => {
     const cell = cells[row][col];
@@ -125,15 +128,54 @@ const markCell = (row, col) => {
         markedCells.push([row, col]);
     }
 };
+let startTime = new Date().getTime();
+const updateTime = (gameOverCheck = true) => {
+    if (startTime !== null) {
+        const currentTime = new Date().getTime();
+        const elapsedMilliseconds = currentTime - startTime;
+        const seconds = Math.floor(elapsedMilliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const timeElement = document.getElementById("time");
+        timeElement.textContent = `Time: ${minutes}:${seconds % 60}`;
+        if (gameOverCheck && checkForWin() || gameLost) {
+            clearInterval(timeInterval);
+            setHighscore(`${minutes}:${seconds % 60}`);
+        }
+        return `${minutes}:${seconds % 60}`;
+    }
+};
+let timeInterval = setInterval(updateTime, 1000);
+const setHighscore = (score) => {
+    var highScores = JSON.parse(localStorage['highScores']);
+    highScores.push(score);
+    localStorage['highScores'] = JSON.stringify(highScores.sort());
+    console.log(JSON.parse(localStorage['highScores']));
+};
+const getHighscores = () => {
+    return JSON.parse(localStorage['highScores']);
+};
+const clearHighscoreList = () => {
+    const highscores = [];
+    localStorage['highScores'] = JSON.stringify(highscores);
+};
+const displayHighscore = () => {
+    const highscores = getHighscores();
+    const highscoreElement = document.getElementById("highscores");
+    highscoreElement.textContent = `Highscores: ${highscores}`;
+};
 const resetGame = () => {
+    updateTime(false);
     grid.innerHTML = "";
     cells = [];
     minesPlaced = false;
     minesCount = 0;
     revealedCells = [];
     markedCells = [];
+    startTime = new Date().getTime();
     initializeGrid();
+    timeInterval = setInterval(updateTime, 1000);
 };
+let gameLost = false;
 grid.addEventListener("click", (event) => {
     const target = event.target;
     const row = parseInt(target.dataset.row);
@@ -146,6 +188,7 @@ grid.addEventListener("click", (event) => {
     }
     else {
         if (target.classList.contains("mine") && !target.classList.contains("marked")) {
+            gameLost = true;
             alert("Game over!");
             const cellsWithMine = document.getElementsByClassName("mine");
             for (let i = 0; i < cellsWithMine.length; i++) {
