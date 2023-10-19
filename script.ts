@@ -16,12 +16,12 @@ const initializeGrid = () => {
     for (let row = 0; row < rows; row++) {
         const rowArray: HTMLDivElement[] = [];
 
-        for (let col = 0; col < columns; col++) {
+        for (let column = 0; column < columns; column++) {
             const cell = document.createElement("div");
 
             cell.classList.add("cell");
             cell.dataset.row = row.toString();
-            cell.dataset.col = col.toString();
+            cell.dataset.col = column.toString();
             grid.appendChild(cell);
             rowArray.push(cell);
         }
@@ -33,18 +33,18 @@ const initializeGrid = () => {
 const placeMines = () => {
     while (minesCount < mines) {
         const row = Math.floor(Math.random() * rows);
-        const col = Math.floor(Math.random() * columns);
+        const column = Math.floor(Math.random() * columns);
 
-        if (!revealedCells.some(([r, c]) => r === row && c === col) &&
-            !cells[row][col].classList.contains("mine")) {
-            cells[row][col].classList.add("mine");
+        if (!revealedCells.some(([r, c]) => r === row && c === column) &&
+            !cells[row][column].classList.contains("mine")) {
+            cells[row][column].classList.add("mine");
             minesCount++;
         }
     }
 };
 
-const revealAdjacentCells = (row: number, col: number) => {
-    const neighbors = getNeighbors(row, col);
+const revealAdjacentCells = (row: number, column: number) => {
+    const neighbors = getNeighbors(row, column);
 
     neighbors.forEach(([r, c]) => {
         if (!revealedCells.some(([x, y]) => x === r && y === c)) {
@@ -53,8 +53,8 @@ const revealAdjacentCells = (row: number, col: number) => {
     });
 };
 
-const getRandomShape = (row: number, col: number) => {
-    revealedCells = [[row, col]];
+const RandomShape = (row: number, column: number) => {
+    revealedCells = [[row, column]];
     let count = Math.floor(Math.random() * 3) + 9;
 
     while (count > 0) {
@@ -72,27 +72,27 @@ const getRandomShape = (row: number, col: number) => {
     return revealedCells;
 };
 
-const revealCell = (row: number, col: number) => {
-    const cell = cells[row][col];
+const revealCell = (row: number, column: number) => {
+    const cell = cells[row][column];
 
     if (cell.classList.contains("revealed") || cell.classList.contains("mine") || cell.classList.contains("marked")) {
         return;
     }
 
     cell.classList.add("revealed");
-    revealedCells.push([row, col]);
-    const mineCount = countAdjacentMines(row, col);
+    revealedCells.push([row, column]);
+    const mineCount = countAdjacentMines(row, column);
 
     if (mineCount === 0) {
-        revealAdjacentCells(row, col);
+        revealAdjacentCells(row, column);
     } else {
         cell.textContent = mineCount.toString();
     }
 
 };
 
-const countAdjacentMines = (row: number, col: number) => {
-    const neighbors = getNeighbors(row, col);
+const countAdjacentMines = (row: number, column: number) => {
+    const neighbors = getNeighbors(row, column);
     let count = 0;
 
     neighbors.forEach(([r, c]) => {
@@ -104,12 +104,12 @@ const countAdjacentMines = (row: number, col: number) => {
     return count;
 };
 
-const getNeighbors = (row: number, col: number) => {
+const getNeighbors = (row: number, column: number) => {
     const neighbors: [number, number][] = [];
 
     for (let r = Math.max(0, row - 1); r <= Math.min(rows - 1, row + 1); r++) {
-        for (let c = Math.max(0, col - 1); c <= Math.min(columns - 1, col + 1); c++) {
-            if (r !== row || c !== col) {
+        for (let c = Math.max(0, column - 1); c <= Math.min(columns - 1, column + 1); c++) {
+            if (r !== row || c !== column) {
                 neighbors.push([r, c]);
             }
         }
@@ -122,8 +122,8 @@ const checkForWin = () => {
     let allCellsRevealed = true;
 
     for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < columns; col++) {
-            const cell = cells[row][col];
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
 
             if (!cell.classList.contains("mine") && !cell.classList.contains("revealed")) {
                 allCellsRevealed = false;
@@ -133,16 +133,19 @@ const checkForWin = () => {
     }
 
     if (allCellsRevealed) {
+        gameWon = true;
+        setHighscore(updateTime() || 0)
         alert("You won!");
-        setHighscore(updateTime(false) || '')
+        displayHighscore();
+
         return true
     }
 
     return false
 };
 
-const markCell = (row: number, col: number) => {
-    const cell = cells[row][col];
+const markCell = (row: number, column: number) => {
+    const cell = cells[row][column];
 
     if (cell.classList.contains("revealed")) {
         return;
@@ -152,39 +155,41 @@ const markCell = (row: number, col: number) => {
         cell.classList.remove("marked");
         cell.textContent = "";
 
-        markedCells = markedCells.filter(([r, c]) => r !== row || c !== col);
+        markedCells = markedCells.filter(([r, c]) => r !== row || c !== column);
     } else {
         cell.classList.add("marked");
         cell.textContent = "✖";
 
-        markedCells.push([row, col]);
+        markedCells.push([row, column]);
     }
 };
 
 let startTime: number | null = new Date().getTime();
 
-const updateTime = (gameOverCheck: boolean = true) => {
+const updateTime = () => {
     if (startTime !== null) {
         const currentTime = new Date().getTime();
         const elapsedMilliseconds = currentTime - startTime;
         const seconds = Math.floor(elapsedMilliseconds / 1000);
-        const minutes = Math.floor(seconds / 60);
 
         const timeElement = document.getElementById("time") as HTMLParagraphElement;
-        timeElement.textContent = `Time: ${minutes}:${seconds % 60}`;
+        timeElement.textContent = `Time: ${seconds} seconds`;
 
-        if (gameOverCheck && checkForWin() || gameLost) {
+        if (gameWon || gameLost) {
             clearInterval(timeInterval!);
-            setHighscore(`${minutes}:${seconds % 60}`)
+
+            if (!gameLost) {
+                setHighscore(seconds)
+            }
         }
 
-        return `${minutes}:${seconds % 60}`
+        return seconds
     }
 };
 
 let timeInterval = setInterval(updateTime, 1000);
 
-const setHighscore = (score: string) => {
+const setHighscore = (score: number) => {
     var highScores = JSON.parse(localStorage['highScores'])
     highScores.push(score)
 
@@ -198,26 +203,37 @@ const getHighscores = () => {
 }
 
 const clearHighscoreList = () => {
-    const highscores: String[] = []
+    const highscores: Number[] = []
+
     localStorage['highScores'] = JSON.stringify(highscores)
 }
 
 const displayHighscore = () => {
     const highscores = getHighscores()
-    const highscoreElement = document.getElementById("highscores") as HTMLParagraphElement;
-    highscoreElement.textContent = `Highscores: ${highscores}`;
+    const highscoreElement = document.getElementById("highscores") as HTMLDivElement;
+
+    highscoreElement.innerHTML = "";
+
+    highscores.forEach((score: Number, index: number) => {
+        const listItem = document.createElement("li");
+
+        listItem.textContent = `${index + 1}: ${score} seconds`;
+        highscoreElement.appendChild(listItem);
+    });
 }
 
 
 
 const resetGame = () => {
-    updateTime(false);
+    updateTime();
     grid.innerHTML = "";
     cells = [];
     minesPlaced = false;
     minesCount = 0;
     revealedCells = [];
     markedCells = [];
+    gameLost = false;
+    gameWon = false;
 
     startTime = new Date().getTime();
 
@@ -227,14 +243,19 @@ const resetGame = () => {
 };
 
 let gameLost = false;
+let gameWon = false;
 
 grid.addEventListener("click", (event) => {
     const target = event.target as HTMLDivElement;
     const row = parseInt(target.dataset.row!);
-    const col = parseInt(target.dataset.col!);
+    const column = parseInt(target.dataset.col!);
+
+    if (gameWon || gameLost) {
+        return;
+    }
 
     if (!minesPlaced) {
-        const initialCells = getRandomShape(row, col);
+        const initialCells = RandomShape(row, column);
 
         initialCells.forEach(([r, c]) => placeMines());
         minesPlaced = true;
@@ -247,10 +268,11 @@ grid.addEventListener("click", (event) => {
 
             for (let i = 0; i < cellsWithMine.length; i++) {
                 const cell = cellsWithMine[i] as HTMLDivElement;
+
                 cell.style.backgroundColor = 'red';
             }
         } else {
-            revealCell(row, col);
+            revealCell(row, column);
             checkForWin();
         }
     }
@@ -262,11 +284,12 @@ grid.addEventListener("contextmenu", (event) => {
 
     const target = event.target as HTMLDivElement;
     const row = parseInt(target.dataset.row!);
-    const col = parseInt(target.dataset.col!);
+    const column = parseInt(target.dataset.col!);
 
-    markCell(row, col);
+    markCell(row, column);
 });
 
 resetButton.addEventListener("click", resetGame);
 
 initializeGrid();
+displayHighscore();

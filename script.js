@@ -13,11 +13,11 @@ let markedCells = [];
 const initializeGrid = () => {
     for (let row = 0; row < rows; row++) {
         const rowArray = [];
-        for (let col = 0; col < columns; col++) {
+        for (let column = 0; column < columns; column++) {
             const cell = document.createElement("div");
             cell.classList.add("cell");
             cell.dataset.row = row.toString();
-            cell.dataset.col = col.toString();
+            cell.dataset.col = column.toString();
             grid.appendChild(cell);
             rowArray.push(cell);
         }
@@ -27,24 +27,24 @@ const initializeGrid = () => {
 const placeMines = () => {
     while (minesCount < mines) {
         const row = Math.floor(Math.random() * rows);
-        const col = Math.floor(Math.random() * columns);
-        if (!revealedCells.some(([r, c]) => r === row && c === col) &&
-            !cells[row][col].classList.contains("mine")) {
-            cells[row][col].classList.add("mine");
+        const column = Math.floor(Math.random() * columns);
+        if (!revealedCells.some(([r, c]) => r === row && c === column) &&
+            !cells[row][column].classList.contains("mine")) {
+            cells[row][column].classList.add("mine");
             minesCount++;
         }
     }
 };
-const revealAdjacentCells = (row, col) => {
-    const neighbors = getNeighbors(row, col);
+const revealAdjacentCells = (row, column) => {
+    const neighbors = getNeighbors(row, column);
     neighbors.forEach(([r, c]) => {
         if (!revealedCells.some(([x, y]) => x === r && y === c)) {
             revealCell(r, c);
         }
     });
 };
-const getRandomShape = (row, col) => {
-    revealedCells = [[row, col]];
+const RandomShape = (row, column) => {
+    revealedCells = [[row, column]];
     let count = Math.floor(Math.random() * 3) + 9;
     while (count > 0) {
         const randomCell = revealedCells[Math.floor(Math.random() * revealedCells.length)];
@@ -58,23 +58,23 @@ const getRandomShape = (row, col) => {
     }
     return revealedCells;
 };
-const revealCell = (row, col) => {
-    const cell = cells[row][col];
+const revealCell = (row, column) => {
+    const cell = cells[row][column];
     if (cell.classList.contains("revealed") || cell.classList.contains("mine") || cell.classList.contains("marked")) {
         return;
     }
     cell.classList.add("revealed");
-    revealedCells.push([row, col]);
-    const mineCount = countAdjacentMines(row, col);
+    revealedCells.push([row, column]);
+    const mineCount = countAdjacentMines(row, column);
     if (mineCount === 0) {
-        revealAdjacentCells(row, col);
+        revealAdjacentCells(row, column);
     }
     else {
         cell.textContent = mineCount.toString();
     }
 };
-const countAdjacentMines = (row, col) => {
-    const neighbors = getNeighbors(row, col);
+const countAdjacentMines = (row, column) => {
+    const neighbors = getNeighbors(row, column);
     let count = 0;
     neighbors.forEach(([r, c]) => {
         if (cells[r][c].classList.contains("mine")) {
@@ -83,11 +83,11 @@ const countAdjacentMines = (row, col) => {
     });
     return count;
 };
-const getNeighbors = (row, col) => {
+const getNeighbors = (row, column) => {
     const neighbors = [];
     for (let r = Math.max(0, row - 1); r <= Math.min(rows - 1, row + 1); r++) {
-        for (let c = Math.max(0, col - 1); c <= Math.min(columns - 1, col + 1); c++) {
-            if (r !== row || c !== col) {
+        for (let c = Math.max(0, column - 1); c <= Math.min(columns - 1, column + 1); c++) {
+            if (r !== row || c !== column) {
                 neighbors.push([r, c]);
             }
         }
@@ -97,8 +97,8 @@ const getNeighbors = (row, col) => {
 const checkForWin = () => {
     let allCellsRevealed = true;
     for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < columns; col++) {
-            const cell = cells[row][col];
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
             if (!cell.classList.contains("mine") && !cell.classList.contains("revealed")) {
                 allCellsRevealed = false;
                 break;
@@ -106,42 +106,45 @@ const checkForWin = () => {
         }
     }
     if (allCellsRevealed) {
+        gameWon = true;
+        setHighscore(updateTime() || 0);
         alert("You won!");
-        setHighscore(updateTime(false) || '');
+        displayHighscore();
         return true;
     }
     return false;
 };
-const markCell = (row, col) => {
-    const cell = cells[row][col];
+const markCell = (row, column) => {
+    const cell = cells[row][column];
     if (cell.classList.contains("revealed")) {
         return;
     }
     if (cell.classList.contains("marked")) {
         cell.classList.remove("marked");
         cell.textContent = "";
-        markedCells = markedCells.filter(([r, c]) => r !== row || c !== col);
+        markedCells = markedCells.filter(([r, c]) => r !== row || c !== column);
     }
     else {
         cell.classList.add("marked");
         cell.textContent = "✖";
-        markedCells.push([row, col]);
+        markedCells.push([row, column]);
     }
 };
 let startTime = new Date().getTime();
-const updateTime = (gameOverCheck = true) => {
+const updateTime = () => {
     if (startTime !== null) {
         const currentTime = new Date().getTime();
         const elapsedMilliseconds = currentTime - startTime;
         const seconds = Math.floor(elapsedMilliseconds / 1000);
-        const minutes = Math.floor(seconds / 60);
         const timeElement = document.getElementById("time");
-        timeElement.textContent = `Time: ${minutes}:${seconds % 60}`;
-        if (gameOverCheck && checkForWin() || gameLost) {
+        timeElement.textContent = `Time: ${seconds} seconds`;
+        if (gameWon || gameLost) {
             clearInterval(timeInterval);
-            setHighscore(`${minutes}:${seconds % 60}`);
+            if (!gameLost) {
+                setHighscore(seconds);
+            }
         }
-        return `${minutes}:${seconds % 60}`;
+        return seconds;
     }
 };
 let timeInterval = setInterval(updateTime, 1000);
@@ -161,27 +164,38 @@ const clearHighscoreList = () => {
 const displayHighscore = () => {
     const highscores = getHighscores();
     const highscoreElement = document.getElementById("highscores");
-    highscoreElement.textContent = `Highscores: ${highscores}`;
+    highscoreElement.innerHTML = "";
+    highscores.forEach((score, index) => {
+        const listItem = document.createElement("li");
+        listItem.textContent = `${index + 1}: ${score} seconds`;
+        highscoreElement.appendChild(listItem);
+    });
 };
 const resetGame = () => {
-    updateTime(false);
+    updateTime();
     grid.innerHTML = "";
     cells = [];
     minesPlaced = false;
     minesCount = 0;
     revealedCells = [];
     markedCells = [];
+    gameLost = false;
+    gameWon = false;
     startTime = new Date().getTime();
     initializeGrid();
     timeInterval = setInterval(updateTime, 1000);
 };
 let gameLost = false;
+let gameWon = false;
 grid.addEventListener("click", (event) => {
     const target = event.target;
     const row = parseInt(target.dataset.row);
-    const col = parseInt(target.dataset.col);
+    const column = parseInt(target.dataset.col);
+    if (gameWon || gameLost) {
+        return;
+    }
     if (!minesPlaced) {
-        const initialCells = getRandomShape(row, col);
+        const initialCells = RandomShape(row, column);
         initialCells.forEach(([r, c]) => placeMines());
         minesPlaced = true;
         initialCells.forEach(([r, c]) => revealCell(r, c));
@@ -197,7 +211,7 @@ grid.addEventListener("click", (event) => {
             }
         }
         else {
-            revealCell(row, col);
+            revealCell(row, column);
             checkForWin();
         }
     }
@@ -206,8 +220,9 @@ grid.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     const target = event.target;
     const row = parseInt(target.dataset.row);
-    const col = parseInt(target.dataset.col);
-    markCell(row, col);
+    const column = parseInt(target.dataset.col);
+    markCell(row, column);
 });
 resetButton.addEventListener("click", resetGame);
 initializeGrid();
+displayHighscore();
