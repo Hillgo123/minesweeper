@@ -1,6 +1,5 @@
 const grid = document.getElementById("grid")!;
 const resetButton = document.getElementById("reset")!;
-
 const rows = 20;
 const columns = 20;
 const totalCells = rows * columns;
@@ -34,19 +33,28 @@ const initializeGrid = () => {
     }
 };
 
+
+let mineSet: Set<string> = new Set();
+
 /**
  * Randomly places mines on the game board until the desired number of mines is reached.
  */
-const placeMines = () => {
+const placeMines = (initialCells: [number, number][]) => {
     while (minesCount < mines) { // Keep looping until we've placed all the mines desired
         const row = Math.floor(Math.random() * rows); // Choose a random row index
         const column = Math.floor(Math.random() * columns); // Choose a random column index
 
+        // Check if the chosen row and column is one of the initial cells
+        if (initialCells.some(([r, c]) => r === row && c === column)) {
+            continue;
+        }
+
         // Check if the cell at the chosen row and column has already been revealed or already contains a mine
-        if (!revealedCells.some(([r, c]) => r === row && c === column) &&
-            !cells[row][column].classList.contains("mine")) {
-            cells[row][column].classList.add("mine"); // Add the "mine" class to the cell to indicate that it contains a mine
-            minesCount++; // Increment the number of mines we've placed
+        // (!revealedCells.some(([r, c]) => r === row && c === column)
+        const cellKey = `${row},${column}`;
+        if (!mineSet.has(cellKey)) {
+            mineSet.add(cellKey);
+            minesCount++;
         }
     }
 };
@@ -76,7 +84,7 @@ const revealAdjacentCells = (row: number, column: number) => {
  * @param column - The column index of the starting cell.
  * @returns An array of cells to be revealed.
  */
-const RandomShape = (row: number, column: number) => {
+const randomShape = (row: number, column: number) => {
     // Set the revealedCells array to contain only the given row and column
     revealedCells = [[row, column]];
     // Choose a random number between 9 and 11 (inclusive) to determine how many cells to reveal
@@ -112,7 +120,7 @@ const RandomShape = (row: number, column: number) => {
 const revealCell = (row: number, column: number) => {
     const cell = cells[row][column];
 
-    if (cell.classList.contains("revealed") || cell.classList.contains("mine") || cell.classList.contains("marked")) {
+    if (cell.classList.contains("revealed") || mineSet.has(`${row},${column}`) || cell.classList.contains("marked")) {
         return;
     }
 
@@ -140,7 +148,7 @@ const countAdjacentMines = (row: number, column: number) => {
     let count = 0;
 
     neighbors.forEach(([r, c]) => {
-        if (cells[r][c].classList.contains("mine")) {
+        if (mineSet.has(`${r},${c}`)) {
             count++;
         }
     });
@@ -188,7 +196,7 @@ const checkForWin = () => {
             const cell = cells[row][column];
 
             // If the cell is not a mine and has not been revealed, set allCellsRevealed to false and break out of the loop
-            if (!cell.classList.contains("mine") && !cell.classList.contains("revealed")) {
+            if (!mineSet.has(`${row},${column}`) && !cell.classList.contains("revealed")) {
                 allCellsRevealed = false;
                 break;
             }
@@ -334,6 +342,8 @@ const resetGame = () => {
     gameLost = false;
     gameWon = false;
 
+    mineSet.clear();
+
     startTime = new Date().getTime();
 
     initializeGrid();
@@ -358,24 +368,22 @@ grid.addEventListener("click", (event) => {
 
     // If the mines haven't been placed yet, place them and reveal the initial cells
     if (!minesPlaced) {
-        const initialCells = RandomShape(row, column);
+        const initialCells = randomShape(row, column);
 
-        initialCells.forEach(([r, c]) => placeMines());
+        placeMines(initialCells);
         minesPlaced = true;
         initialCells.forEach(([r, c]) => revealCell(r, c));
     } else {
         // If the clicked cell is a mine and isn't marked, the game is lost
-        if (target.classList.contains("mine") && !target.classList.contains("marked")) {
+        if (mineSet.has(`${row},${column}`) && !target.classList.contains("marked")) {
             gameLost = true;
             alert("Game over!");
-            const cellsWithMine = document.getElementsByClassName("mine");
 
             // Highlight all cells with mines in red
-            for (let i = 0; i < cellsWithMine.length; i++) {
-                const cell = cellsWithMine[i] as HTMLDivElement;
-
-                cell.style.backgroundColor = 'red';
-            }
+            mineSet.forEach(mine => {
+                const [r, c] = mine.split(",").map(Number);
+                cells[r][c].style.backgroundColor = "red";
+            });
         } else {
             // Otherwise, reveal the clicked cell and check if the game has been won
             revealCell(row, column);

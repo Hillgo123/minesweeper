@@ -38,10 +38,6 @@ body {
     background: #cbc6c6;
 }
 
-.cell.mine {
-    background-color: red;
-}
-
 #reset {
     margin-top: 20px;
 }
