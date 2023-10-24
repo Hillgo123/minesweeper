@@ -134,6 +134,36 @@ const revealCell = (row: number, column: number) => {
     } else {
         // Otherwise, set the text content of the cell to the number of adjacent mines
         cell.textContent = mineCount.toString();
+
+        // Set the color of the cell based on the number of adjacent mines
+        switch (mineCount) {
+            case 1:
+                cell.style.color = "blue";
+                break;
+            case 2:
+                cell.style.color = "green";
+                break;
+            case 3:
+                cell.style.color = "red";
+                break;
+            case 4:
+                cell.style.color = "purple";
+                break;
+            case 5:
+                cell.style.color = "maroon";
+                break;
+            case 6:
+                cell.style.color = "rgb(000, 130, 130)";
+                break;
+            case 7:
+                cell.style.color = "black";
+                break;
+            case 8:
+                cell.style.color = "gray";
+                break;
+            default:
+                break;
+        }
     }
 };
 
@@ -208,7 +238,6 @@ const checkForWin = () => {
         gameWon = true;
         // setHighscore(updateTime() || 0)
         alert("You won!");
-        displayHighscore();
 
         return true;
     }
@@ -265,12 +294,14 @@ const updateTime = () => {
 
         // If the game has ended stop the timer.
         if (gameWon || gameLost) {
-            clearInterval(timeInterval!);
+            clearInterval(timeInterval);
 
             // If the player won add the time to the highscore.
             if (!gameLost) {
                 setHighscore(seconds)
             }
+
+            displayHighscore();
         }
 
         return seconds
@@ -278,6 +309,7 @@ const updateTime = () => {
 };
 
 let timeInterval = setInterval(updateTime, 1000);
+clearInterval(timeInterval)
 
 /**
  * Adds a new score to the high scores list and stores it in local storage.
@@ -288,8 +320,6 @@ const setHighscore = (score: number) => {
     highScores.push(score)
 
     localStorage['highScores'] = JSON.stringify(highScores.sort())
-
-    console.log(JSON.parse(localStorage['highScores']))
 }
 
 /**
@@ -332,7 +362,6 @@ const displayHighscore = () => {
  * @returns void
  */
 const resetGame = () => {
-    updateTime();
     grid.innerHTML = "";
     cells = [];
     minesPlaced = false;
@@ -344,10 +373,11 @@ const resetGame = () => {
 
     mineSet.clear();
 
-    startTime = new Date().getTime();
+    clearInterval(timeInterval)
 
     initializeGrid();
-    timeInterval = setInterval(updateTime, 1000);
+
+    displayHighscore();
 };
 
 let gameLost = false;
@@ -373,6 +403,9 @@ grid.addEventListener("click", (event) => {
         placeMines(initialCells);
         minesPlaced = true;
         initialCells.forEach(([r, c]) => revealCell(r, c));
+
+        startTime = new Date().getTime();
+        timeInterval = setInterval(updateTime, 1000);
     } else {
         // If the clicked cell is a mine and isn't marked, the game is lost
         if (mineSet.has(`${row},${column}`) && !target.classList.contains("marked")) {
@@ -396,6 +429,10 @@ grid.addEventListener("click", (event) => {
 grid.addEventListener("contextmenu", (event) => {
     event.preventDefault();
 
+    if (gameWon || gameLost) {
+        return;
+    }
+
     const target = event.target as HTMLDivElement;
     const row = parseInt(target.dataset.row!);
     const column = parseInt(target.dataset.column!);
@@ -407,3 +444,4 @@ resetButton.addEventListener("click", resetGame);
 
 initializeGrid();
 displayHighscore();
+// clearHighscoreList();
