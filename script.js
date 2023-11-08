@@ -4,7 +4,7 @@ const resetButton = document.getElementById("reset");
 const rows = 20;
 const columns = 20;
 const totalCells = rows * columns;
-const mines = 380;
+const mines = 80;
 let cells = [];
 let minesPlaced = false;
 let minesCount = 0;
@@ -207,7 +207,10 @@ const checkForWin = () => {
     // If all cells have been revealed, set gameWon to true, display the highscore, and return true
     if (allCellsRevealed) {
         gameWon = true;
-        // setHighscore(updateTime() || 0)
+        mineSet.forEach(mine => {
+            const [r, c] = mine.split(",").map(Number);
+            cells[r][c].style.backgroundColor = "red";
+        });
         alert("You won!");
         return true;
     }
@@ -323,8 +326,7 @@ const resetGame = () => {
 };
 let gameLost = false;
 let gameWon = false;
-// Add a click event listener to the grid
-grid.addEventListener("click", (event) => {
+const gameInteraction = (event) => {
     // Get the clicked cell's row and column
     const target = event.target;
     const row = parseInt(target.dataset.row);
@@ -359,7 +361,17 @@ grid.addEventListener("click", (event) => {
             checkForWin();
         }
     }
+};
+// Add a click event listener to the grid
+grid.addEventListener("click", (event) => {
+    gameInteraction(event);
 });
+// document.addEventListener("keydown", (event) => {
+//     if (event.code === "Space") {
+//         event.preventDefault();
+//         gameInteraction(event);
+//     }
+// });
 grid.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     if (gameWon || gameLost) {
