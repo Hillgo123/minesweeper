@@ -1,9 +1,10 @@
 const grid = document.getElementById("grid")!;
 const resetButton = document.getElementById("reset")!;
-const rows = 20;
-const columns = 20;
+var rows = 20;
+var columns = 20;
 const totalCells = rows * columns;
-const mines = 80;
+var mines = 80;
+var randomShapeSize = 9;
 
 let cells: HTMLDivElement[][] = [];
 let minesPlaced = false;
@@ -84,11 +85,11 @@ const revealAdjacentCells = (row: number, column: number) => {
  * @param column - The column index of the starting cell.
  * @returns An array of cells to be revealed.
  */
-const randomShape = (row: number, column: number) => {
+const randomShape = (row: number, column: number, size: number) => {
     // Set the revealedCells array to contain only the given row and column
     revealedCells = [[row, column]];
     // Choose a random number between 9 and 11 (inclusive) to determine how many cells to reveal
-    let count = Math.floor(Math.random() * 3) + 9;
+    let count = Math.floor(Math.random() * 3) + size;
 
     // Loop until we've revealed the desired number of cells
     while (count > 0) {
@@ -303,7 +304,7 @@ const updateTime = () => {
 
             // If the player won add the time to the highscore.
             if (!gameLost) {
-                setHighscore(seconds)
+                setHighscore(seconds, currentDifficulty)
             }
 
             displayHighscore();
@@ -320,11 +321,11 @@ clearInterval(timeInterval)
  * Adds a new score to the high scores list and stores it in local storage.
  * @param score The score to be added to the high scores list.
  */
-const setHighscore = (score: number) => {
+const setHighscore = (score: number, difficulty: string) => {
     var highScores = JSON.parse(localStorage['highScores'])
     highScores.push(score)
 
-    localStorage['highScores'] = JSON.stringify(highScores.sort())
+    localStorage[`highScores${difficulty}`] = JSON.stringify(highScores.sort())
 }
 
 /**
@@ -388,6 +389,51 @@ const resetGame = () => {
 let gameLost = false;
 let gameWon = false;
 
+var currentDifficulty = 'hard';
+
+const changeDifficulty = () => {
+    var selectDifficulty = document.getElementsByClassName('difficulty-drop-down') as HTMLCollectionOf<HTMLInputElement>;
+    var newDifficulty: String = selectDifficulty[0].value;
+
+    switch (newDifficulty) {
+        case ('easy'):
+            rows = 10;
+            columns = 10;
+            mines = 30;
+            randomShapeSize = 3;
+            cells = [];
+            grid.innerHTML = '';
+            initializeGrid();
+            grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
+            currentDifficulty = 'easy'
+            break;
+        case ('medium'):
+            rows = 15;
+            columns = 15;
+            mines = 50;
+            randomShapeSize = 6;
+            cells = [];
+            grid.innerHTML = '';
+            initializeGrid();
+            grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
+            currentDifficulty = 'medium';
+            break;
+        case ('hard'):
+            rows = 20;
+            columns = 20;
+            mines = 80;
+            randomShapeSize = 9;
+            cells = [];
+            grid.innerHTML = '';
+            initializeGrid();
+            grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
+            currentDifficulty = 'hard'
+            break;
+        default:
+            break;
+    }
+}
+
 
 const gameInteraction = (event: Event) => {
     // Get the clicked cell's row and column
@@ -402,7 +448,7 @@ const gameInteraction = (event: Event) => {
 
     // If the mines haven't been placed yet, place them and reveal the initial cells
     if (!minesPlaced) {
-        const initialCells = randomShape(row, column);
+        const initialCells = randomShape(row, column, randomShapeSize);
 
         placeMines(initialCells);
         minesPlaced = true;

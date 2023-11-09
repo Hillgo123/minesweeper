@@ -9,13 +9,11 @@
 <body>
     <header>
         <h1>Minesweeper</h1>
-        <p class="difficulty-drop-down">
-            <li>
-                <ul></ul>
-                <ul></ul>
-                <ul></ul>
-            </li>
-        </p>
+        <select name="difficulty" class="difficulty-drop-down" onchange="changeDifficulty()">
+            <option value="hard" selected>Hard</option>
+            <option value="medium">Medium</option>
+            <option value="easy">Easy</option>
+        </select>
         <p id="time">Time: 0 seconds</p>
     </header>
     <main>
