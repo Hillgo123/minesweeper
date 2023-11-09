@@ -166,6 +166,8 @@ const revealCell = (row: number, column: number) => {
                 break;
         }
     }
+    memo.clear();
+    calculateMineProbabilityUsingBacktracking();
 };
 
 /**
@@ -506,4 +508,152 @@ resetButton.addEventListener("click", resetGame);
 
 initializeGrid();
 displayHighscore();
+// satisfaction algorithms
 // clearHighscoreList();
+
+interface CellConstraints {
+    cellKey: string;
+    constraints: Set<string>;
+}
+
+const calculateConstraintsForCell = (row: number, column: number): CellConstraints => {
+    const constraints = new Set<string>();
+    const neighbors = getNeighbors(row, column);
+    let mineCount = countAdjacentMines(row, column);
+
+    neighbors.forEach(([r, c]) => {
+        const cellKey = `${r},${c}`;
+        if (!cells[r][c].classList.contains('revealed') && !cells[r][c].classList.contains('marked')) {
+            constraints.add(cellKey);
+        } else if (cells[r][c].classList.contains('marked')) {
+            mineCount--;
+        }
+    });
+
+    return { cellKey: `${row},${column}`, constraints };
+};
+
+const calculateMineProbabilityUsingCSP = () => {
+    const probabilities = new Map<string, number>();
+    const constraints: CellConstraints[] = [];
+
+    // Generate constraints for each revealed cell with a number
+    revealedCells.forEach(([row, column]) => {
+        if (cells[row][column].textContent) {
+            constraints.push(calculateConstraintsForCell(row, column));
+        }
+    });
+
+    // Simplify and solve the system of constraints
+
+    // For now, let's assume the simple case where each number corresponds
+    // directly to the number of mines around it.
+    constraints.forEach(constraint => {
+        const numMines = parseInt(cells[parseInt(constraint.cellKey.split(',')[0])][parseInt(constraint.cellKey.split(',')[1])].textContent || '0', 10);
+        const numCells = constraint.constraints.size;
+        const probability = numMines / numCells;
+
+        constraint.constraints.forEach(cellKey => {
+            const existingProbability = probabilities.get(cellKey);
+            probabilities.set(cellKey, existingProbability !== undefined ? Math.max(existingProbability, probability) : probability);
+        });
+    });
+
+    // Update cell probabilities
+    probabilities.forEach((probability, cellKey) => {
+        const [row, column] = cellKey.split(',').map(Number);
+        const cell = cells[row][column];
+        cell.dataset.probability = probability.toFixed(2); // Save to data attribute
+        cell.textContent = probability.toFixed(2); // Display on UI
+    });
+};
+
+const getPermutations = (arr: number[], size: number): number[][] => {
+    function p(t: number[], i: number): number[][] {
+        if (t.length === size) return [t];
+        if (i + 1 > arr.length) return [];
+        return p(t.concat(arr[i]), i + 1).concat(p(t, i + 1));
+    }
+    return p([], 0);
+};
+
+const validateConfiguration = (configuration: Set<string>, constraints: CellConstraints[]): boolean => {
+    for (const constraint of constraints) {
+        const mineCount = parseInt(cells[parseInt(constraint.cellKey.split(',')[0])][parseInt(constraint.cellKey.split(',')[1])].textContent || '0', 10);
+        const adjacentMineCount = Array.from(constraint.constraints)
+            .filter(key => configuration.has(key))
+            .length;
+        if (mineCount !== adjacentMineCount) return false;
+    }
+    return true;
+};
+
+const calculateMineProbabilityUsingBacktracking = () => {
+    let configurationsCount = new Map<string, number>();
+    const cellsToCheck: CellConstraints[] = revealedCells
+        .map(([row, column]) => calculateConstraintsForCell(row, column))
+        .filter(c => c.constraints.size > 0);
+
+    const backtrack = (currentConfig: Set<string>, index: number) => {
+        if (index === cellsToCheck.length) {
+            currentConfig.forEach(key => {
+                configurationsCount.set(key, (configurationsCount.get(key) || 0) + 1);
+            });
+            return;
+        }
+
+        const cellConstraints = cellsToCheck[index];
+        if (cellConstraints.constraints.size === 0) {
+            backtrack(currentConfig, index + 1);
+            return;
+        }
+
+        const permutationKeys = Array.from(cellConstraints.constraints);
+        const mineCount = parseInt(cells[parseInt(cellConstraints.cellKey.split(',')[0])][parseInt(cellConstraints.cellKey.split(',')[1])].textContent || '0', 10);
+        const permutations = mineCount === 0 ? [[]] : getPermutations(permutationKeys, mineCount);
+
+        for (const permutation of permutations) {
+            const newConfig = new Set(currentConfig);
+            permutation.forEach(key => newConfig.add(key));
+            if (cachedValidateConfiguration(newConfig, cellsToCheck.slice(0, index + 1))) {
+                backtrack(newConfig, index + 1);
+            }
+        }
+    };
+
+    // Start backtracking from the first cell
+    backtrack(new Set<string>(), 0);
+
+    // Calculate probabilities
+    const configurationKeys = Array.from(configurationsCount.keys());
+    const totalConfigurations = configurationKeys.reduce((acc, key) => acc + (configurationsCount.get(key) || 0), 0);
+
+    configurationKeys.forEach(key => {
+        const [row, column] = key.split(',').map(Number);
+        const cell = cells[row][column];
+        if (!cell.classList.contains('revealed')) { // Make sure we only update unrevealed cells
+            const probability = (configurationsCount.get(key) || 0) / totalConfigurations;
+            cell.dataset.probability = probability.toFixed(2); // Save to data attribute
+            cell.textContent = probability.toFixed(2); // Display on UI
+        }
+    });
+};
+
+const memo = new Map<string, boolean>();
+
+const configurationToString = (configuration: Set<string>): string => {
+    return Array.from(configuration).sort().join(',');
+};
+
+const cachedValidateConfiguration = (configuration: Set<string>, constraints: CellConstraints[]): boolean => {
+    const configStr = configurationToString(configuration);
+    // Check if the result is already in the cache
+    if (memo.has(configStr)) {
+        return memo.get(configStr)!;
+    }
+
+    // If not, calculate it and store it in the cache
+    const isValid = validateConfiguration(configuration, constraints);
+    memo.set(configStr, isValid);
+    return isValid;
+};
