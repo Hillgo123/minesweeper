@@ -429,3 +429,44 @@ resetButton.addEventListener("click", resetGame);
 initializeGrid();
 displayHighscore();
 // clearHighscoreList();
+const hintButton = document.getElementById("hint");
+/**
+ * Gives a hint by revealing an unrevealed cell that has at least one revealed neighbor.
+ */
+const giveHint = () => {
+    // If the game has already been won or lost, don't give a hint
+    if (gameWon || gameLost) {
+        return;
+    }
+    // Create an array to hold all unrevealed cells that have at least one revealed neighbor
+    let unrevealedCells = [];
+    // Find all unrevealed cells
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+            // If the cell is unrevealed and unmarked...
+            if (!cell.classList.contains("revealed") && !cell.classList.contains("marked")) {
+                // ...get its neighbors...
+                const neighbors = getNeighbors(row, column);
+                // ...and if at least one neighbor is revealed, add this cell to the list of unrevealed cells with revealed neighbors
+                if (neighbors.some(([r, c]) => cells[r][c].classList.contains("revealed"))) {
+                    unrevealedCells.push([row, column]);
+                }
+            }
+        }
+    }
+    // If there are any unrevealed cells with revealed neighbors...
+    if (unrevealedCells.length > 0) {
+        let randomIndex;
+        let row;
+        let column;
+        // ...choose a random unrevealed cell with revealed neighbors that is not a mine...
+        do {
+            randomIndex = Math.floor(Math.random() * unrevealedCells.length);
+            [row, column] = unrevealedCells[randomIndex];
+        } while (mineSet.has(`${row},${column}`));
+        // ...and reveal it
+        revealCell(row, column);
+        checkForWin();
+    }
+};
