@@ -435,12 +435,7 @@ const changeDifficulty = () => {
 }
 
 
-const gameInteraction = (event: Event) => {
-    // Get the clicked cell's row and column
-    const target = event.target as HTMLDivElement;
-    const row = parseInt(target.dataset.row!);
-    const column = parseInt(target.dataset.column!);
-
+const gameInteraction = (row: number, column: number) => {
     // If the game has already been won or lost, do nothing
     if (gameWon || gameLost) {
         return;
@@ -458,6 +453,8 @@ const gameInteraction = (event: Event) => {
         timeInterval = setInterval(updateTime, 1000);
     } else {
         // If the clicked cell is a mine and isn't marked, the game is lost
+        const target = cells[row][column];
+
         if (mineSet.has(`${row},${column}`) && !target.classList.contains("marked")) {
             gameLost = true;
             alert("Game over!");
@@ -477,15 +474,34 @@ const gameInteraction = (event: Event) => {
 
 // Add a click event listener to the grid
 grid.addEventListener("click", (event) => {
-    gameInteraction(event)
+    const target = event.target as HTMLDivElement;
+    const row = parseInt(target.dataset.row!);
+    const column = parseInt(target.dataset.column!);
+
+    gameInteraction(row, column)
 });
 
-// document.addEventListener("keydown", (event) => {
-//     if (event.code === "Space") {
-//         event.preventDefault();
-//         gameInteraction(event);
-//     }
-// });
+// Add a keydown event listener to the document to reveal cells with spacebar
+let focusedCell: HTMLDivElement | null = null;
+
+document.addEventListener("keydown", (event) => {
+    if (event.code === "Space") {
+        if (focusedCell) {
+            const row = parseInt(focusedCell.dataset.row!);
+            const column = parseInt(focusedCell.dataset.column!);
+
+            gameInteraction(row, column)
+        }
+    }
+});
+
+// Add a mousemove event listener to get the target of the mouse for the spacebar event listener
+grid.addEventListener("mousemove", (event) => {
+    const target = event.target as HTMLDivElement;
+    if (target.classList.contains("cell")) {
+        focusedCell = target;
+    }
+});
 
 
 grid.addEventListener("contextmenu", (event) => {
@@ -513,7 +529,6 @@ const hintButton = document.getElementById("hint")!;
 /**
  * Gives a hint by revealing an unrevealed cell that has at least one revealed neighbor.
  */
-
 const giveHint = () => {
     // If the game has already been won or lost, don't give a hint
     if (gameWon || gameLost) {

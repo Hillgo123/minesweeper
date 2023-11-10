@@ -369,11 +369,7 @@ const changeDifficulty = () => {
             break;
     }
 };
-const gameInteraction = (event) => {
-    // Get the clicked cell's row and column
-    const target = event.target;
-    const row = parseInt(target.dataset.row);
-    const column = parseInt(target.dataset.column);
+const gameInteraction = (row, column) => {
     // If the game has already been won or lost, do nothing
     if (gameWon || gameLost) {
         return;
@@ -389,6 +385,7 @@ const gameInteraction = (event) => {
     }
     else {
         // If the clicked cell is a mine and isn't marked, the game is lost
+        const target = cells[row][column];
         if (mineSet.has(`${row},${column}`) && !target.classList.contains("marked")) {
             gameLost = true;
             alert("Game over!");
@@ -407,14 +404,29 @@ const gameInteraction = (event) => {
 };
 // Add a click event listener to the grid
 grid.addEventListener("click", (event) => {
-    gameInteraction(event);
+    const target = event.target;
+    const row = parseInt(target.dataset.row);
+    const column = parseInt(target.dataset.column);
+    gameInteraction(row, column);
 });
-// document.addEventListener("keydown", (event) => {
-//     if (event.code === "Space") {
-//         event.preventDefault();
-//         gameInteraction(event);
-//     }
-// });
+// Add a keydown event listener to the document to reveal cells with spacebar
+let focusedCell = null;
+document.addEventListener("keydown", (event) => {
+    if (event.code === "Space") {
+        if (focusedCell) {
+            const row = parseInt(focusedCell.dataset.row);
+            const column = parseInt(focusedCell.dataset.column);
+            gameInteraction(row, column);
+        }
+    }
+});
+// Add a mousemove event listener to get the target of the mouse for the spacebar event listener
+grid.addEventListener("mousemove", (event) => {
+    const target = event.target;
+    if (target.classList.contains("cell")) {
+        focusedCell = target;
+    }
+});
 grid.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     if (gameWon || gameLost) {
