@@ -307,7 +307,7 @@ const updateTime = () => {
                 setHighscore(seconds, currentDifficulty)
             }
 
-            displayHighscore();
+            displayHighscore(currentDifficulty);
         }
 
         return seconds
@@ -322,41 +322,48 @@ clearInterval(timeInterval)
  * @param score The score to be added to the high scores list.
  */
 const setHighscore = (score: number, difficulty: string) => {
-    var highScores = JSON.parse(localStorage['highScores'])
-    highScores.push(score)
-
-    localStorage[`highScores${difficulty}`] = JSON.stringify(highScores.sort())
+    let highScores = getHighscores(difficulty);
+    highScores.push(score);
+    highScores.sort((a: number, b: number) => a - b);
+    localStorage.setItem(`highScores_${difficulty}`, JSON.stringify(highScores));
 }
+
 
 /**
  * Retrieves the high scores from local storage and parses them as JSON.
  * @returns {Array} An array of high scores.
  */
-const getHighscores = () => {
-    return JSON.parse(localStorage['highScores'])
+const getHighscores = (difficulty: string) => {
+    const storedData = localStorage.getItem(`highScores_${difficulty}`);
+    if (storedData) {
+        try {
+            return JSON.parse(storedData) || [];
+        } catch (error) {
+            console.error('Error parsing high scores:', error);
+            return [];
+        }
+    }
+    return [];
 }
 
 /**
  * Clears the highscore list by resetting the local storage to an empty array.
  */
-const clearHighscoreList = () => {
-    const highscores: Number[] = []
-
-    localStorage['highScores'] = JSON.stringify(highscores)
+const clearHighscoreList = (difficulty: string) => {
+    localStorage.setItem(`highScores_${difficulty}`, JSON.stringify([]));
 }
 
 /**
  * Displays the highscores on the page.
  */
-const displayHighscore = () => {
-    const highscores = getHighscores()
-    const highscoreElement = document.getElementById("highscores") as HTMLDivElement;
+const displayHighscore = (difficulty: string) => {
+    const highscores = getHighscores(difficulty);
+    const highscoreElement = document.getElementById(`highscores`) as HTMLDivElement;
 
     highscoreElement.innerHTML = "";
 
-    highscores.forEach((score: Number, index: number) => {
+    highscores.forEach((score: number, index: number) => {
         const listItem = document.createElement("li");
-
         listItem.textContent = `${index + 1}: ${score} seconds`;
         highscoreElement.appendChild(listItem);
     });
@@ -383,7 +390,7 @@ const resetGame = () => {
 
     initializeGrid();
 
-    displayHighscore();
+    displayHighscore(currentDifficulty);
 };
 
 let gameLost = false;
@@ -432,6 +439,7 @@ const changeDifficulty = () => {
         default:
             break;
     }
+    displayHighscore(currentDifficulty);
 }
 
 
@@ -468,6 +476,59 @@ const gameInteraction = (row: number, column: number) => {
             // Otherwise, reveal the clicked cell and check if the game has been won
             revealCell(row, column);
             checkForWin();
+        }
+    }
+}
+
+/**
+ * Gives a hint by revealing an unrevealed cell that has at least one revealed neighbor.
+ */
+const giveHint = () => {
+    // If the game has already been won or lost, don't give a hint
+    if (gameWon || gameLost) {
+        return;
+    }
+
+    // Create an array to hold all unrevealed cells that have at least one revealed neighbor
+    let unrevealedCells: [number, number][] = [];
+
+    // Find all unrevealed cells
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+
+            // If the cell is unrevealed and unmarked...
+            if (!cell.classList.contains("revealed") && !cell.classList.contains("marked")) {
+                // ...get its neighbors...
+                const neighbors = getNeighbors(row, column);
+                // ...and if at least one neighbor is revealed, add this cell to the list of unrevealed cells with revealed neighbors
+                if (neighbors.some(([r, c]) => cells[r][c].classList.contains("revealed"))) {
+                    unrevealedCells.push([row, column]);
+                }
+            }
+        }
+    }
+
+    // If there are any unrevealed cells with revealed neighbors...
+    if (unrevealedCells.length > 0) {
+        let randomIndex: number;
+        let row: number;
+        let column: number;
+
+        // ...choose a random unrevealed cell with revealed neighbors that is not a mine...
+        do {
+            randomIndex = Math.floor(Math.random() * unrevealedCells.length);
+            [row, column] = unrevealedCells[randomIndex];
+        } while (mineSet.has(`${row},${column}`));
+
+        // ...and reveal it
+        revealCell(row, column);
+        checkForWin();
+
+        // Increase the timer by 5 seconds when a hint is used
+        if (startTime !== null) {
+            startTime -= 5000;
+            updateTime()
         }
     }
 }
@@ -521,54 +582,4 @@ grid.addEventListener("contextmenu", (event) => {
 resetButton.addEventListener("click", resetGame);
 
 initializeGrid();
-displayHighscore();
-// clearHighscoreList();
-
-const hintButton = document.getElementById("hint")!;
-
-/**
- * Gives a hint by revealing an unrevealed cell that has at least one revealed neighbor.
- */
-const giveHint = () => {
-    // If the game has already been won or lost, don't give a hint
-    if (gameWon || gameLost) {
-        return;
-    }
-
-    // Create an array to hold all unrevealed cells that have at least one revealed neighbor
-    let unrevealedCells: [number, number][] = [];
-
-    // Find all unrevealed cells
-    for (let row = 0; row < rows; row++) {
-        for (let column = 0; column < columns; column++) {
-            const cell = cells[row][column];
-
-            // If the cell is unrevealed and unmarked...
-            if (!cell.classList.contains("revealed") && !cell.classList.contains("marked")) {
-                // ...get its neighbors...
-                const neighbors = getNeighbors(row, column);
-                // ...and if at least one neighbor is revealed, add this cell to the list of unrevealed cells with revealed neighbors
-                if (neighbors.some(([r, c]) => cells[r][c].classList.contains("revealed"))) {
-                    unrevealedCells.push([row, column]);
-                }
-            }
-        }
-    }
-
-    // If there are any unrevealed cells with revealed neighbors...
-    if (unrevealedCells.length > 0) {
-        let randomIndex: number;
-        let row: number;
-        let column: number;
-
-        // ...choose a random unrevealed cell with revealed neighbors that is not a mine...
-        do {
-            randomIndex = Math.floor(Math.random() * unrevealedCells.length);
-            [row, column] = unrevealedCells[randomIndex];
-        } while (mineSet.has(`${row},${column}`));
-
-        // ...and reveal it
-        revealCell(row, column);
-        checkForWin();
-    }
-}
+displayHighscore(currentDifficulty);
