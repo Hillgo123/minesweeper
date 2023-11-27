@@ -166,12 +166,12 @@ const markCell = (row, column) => {
     }
 };
 let startTime = new Date().getTime();
+const timeElement = document.getElementById("time");
 const updateTime = () => {
     if (startTime !== null) {
         const currentTime = new Date().getTime();
         const elapsedMilliseconds = currentTime - startTime;
         const seconds = Math.floor(elapsedMilliseconds / 1000);
-        const timeElement = document.getElementById("time");
         timeElement.textContent = `Time: ${seconds} seconds`;
         if (gameWon || gameLost) {
             clearInterval(timeInterval);
@@ -228,6 +228,7 @@ const resetGame = () => {
     gameWon = false;
     mineSet.clear();
     clearInterval(timeInterval);
+    timeElement.innerHTML = "Time: 0 seconds";
     initializeGrid();
     displayHighscore(currentDifficulty);
 };
@@ -248,6 +249,7 @@ const changeDifficulty = () => {
             initializeGrid();
             grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
             currentDifficulty = 'easy';
+            resetGame();
             break;
         case ('medium'):
             rows = 15;
@@ -259,6 +261,7 @@ const changeDifficulty = () => {
             initializeGrid();
             grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
             currentDifficulty = 'medium';
+            resetGame();
             break;
         case ('hard'):
             rows = 20;
@@ -270,6 +273,7 @@ const changeDifficulty = () => {
             initializeGrid();
             grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
             currentDifficulty = 'hard';
+            resetGame();
             break;
         default:
             break;

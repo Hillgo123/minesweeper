@@ -284,18 +284,19 @@ const markCell = (row: number, column: number) => {
 
 let startTime: number = new Date().getTime();
 
+const timeElement = document.getElementById("time") as HTMLParagraphElement;
+
 /**
  * Updates the time elapsed since the game started and displays it on the page.
  * If the game has been won or lost, the time interval is cleared and the highscore is set (if applicable).
  * @returns The number of seconds elapsed since the game started.
- */
+*/
 const updateTime = () => {
     if (startTime !== null) {
         const currentTime = new Date().getTime();
         const elapsedMilliseconds = currentTime - startTime;
         const seconds = Math.floor(elapsedMilliseconds / 1000);
 
-        const timeElement = document.getElementById("time") as HTMLParagraphElement;
         timeElement.textContent = `Time: ${seconds} seconds`;
 
         // If the game has ended stop the timer.
@@ -388,6 +389,8 @@ const resetGame = () => {
 
     clearInterval(timeInterval)
 
+    timeElement.innerHTML = "Time: 0 seconds"
+
     initializeGrid();
 
     displayHighscore(currentDifficulty);
@@ -413,6 +416,7 @@ const changeDifficulty = () => {
             initializeGrid();
             grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
             currentDifficulty = 'easy'
+            resetGame();
             break;
         case ('medium'):
             rows = 15;
@@ -424,6 +428,7 @@ const changeDifficulty = () => {
             initializeGrid();
             grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
             currentDifficulty = 'medium';
+            resetGame();
             break;
         case ('hard'):
             rows = 20;
@@ -435,6 +440,7 @@ const changeDifficulty = () => {
             initializeGrid();
             grid.style.gridTemplateColumns = `repeat(${columns}, 30px)`;
             currentDifficulty = 'hard'
+            resetGame();
             break;
         default:
             break;
@@ -582,4 +588,4 @@ grid.addEventListener("contextmenu", (event) => {
 resetButton.addEventListener("click", resetGame);
 
 initializeGrid();
-displayHighscore(currentDifficulty);
+displayHighscore(currentDifficulty)
