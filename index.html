@@ -9,21 +9,25 @@
 <body>
     <header>
         <h1>Minesweeper</h1>
-        <select name="difficulty" class="difficulty-drop-down" onchange="changeDifficulty()">
-            <option value="hard" selected>Hard</option>
-            <option value="medium">Medium</option>
-            <option value="easy">Easy</option>
-        </select>
         <p id="time">Time: 0 seconds</p>
+        <div class="options">
+            <select name="difficulty" class="difficulty-drop-down" onchange="changeDifficulty()">
+                <option value="hard" selected>Hard</option>
+                <option value="medium">Medium</option>
+                <option value="easy">Easy</option>
+            </select>
+            <button id="reset">Reset</button>
+            <button id="hint" onclick="giveHint()">Hint</button>
+        </div>
     </header>
     <main>
         <div class="minesweeper">
             <div id="grid"></div>
-            <button id="reset">Reset</button>
-            <div id="highscores"></div>
-            <button id="hint" onclick="giveHint()">Hint</button>
         </div>
     </main>
+    <div id="highscores">
+        <h2>Highscores:</h2>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>

@@ -361,7 +361,11 @@ const displayHighscore = (difficulty: string) => {
     const highscores = getHighscores(difficulty);
     const highscoreElement = document.getElementById(`highscores`) as HTMLDivElement;
 
-    highscoreElement.innerHTML = "";
+    highscoreElement.innerHTML = "<h2>Highscores:</h2>";
+
+    if (highscores.length === 0) {
+        highscoreElement.innerHTML = "<h2>Highscores:</h2><p>No current scores recorded</p>"
+    }
 
     highscores.forEach((score: number, index: number) => {
         const listItem = document.createElement("li");
@@ -373,7 +377,6 @@ const displayHighscore = (difficulty: string) => {
 
 /**
  * Resets the game by updating the time, clearing the grid, resetting game variables, initializing the grid, and starting the time interval.
- * @returns void
  */
 const resetGame = () => {
     grid.innerHTML = "";
@@ -448,15 +451,25 @@ const changeDifficulty = () => {
     displayHighscore(currentDifficulty);
 }
 
+// Used to prevent the game form using randomShape twice and crashing the game
+let gameInitializing = false;
 
+/**
+ * Used to interact with the game board.
+ * @param row row to reveal
+ * @param column column to reveal
+ * @returns 
+ */
 const gameInteraction = (row: number, column: number) => {
     // If the game has already been won or lost, do nothing
-    if (gameWon || gameLost) {
+    if (gameWon || gameLost || gameInitializing) {
         return;
     }
 
     // If the mines haven't been placed yet, place them and reveal the initial cells
     if (!minesPlaced) {
+        gameInitializing = true;
+
         const initialCells = randomShape(row, column, randomShapeSize);
 
         placeMines(initialCells);
@@ -465,6 +478,8 @@ const gameInteraction = (row: number, column: number) => {
 
         startTime = new Date().getTime();
         timeInterval = setInterval(updateTime, 1000);
+
+        gameInitializing = false;
     } else {
         // If the clicked cell is a mine and isn't marked, the game is lost
         const target = cells[row][column];

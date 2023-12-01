@@ -210,7 +210,10 @@ const clearHighscoreList = (difficulty) => {
 const displayHighscore = (difficulty) => {
     const highscores = getHighscores(difficulty);
     const highscoreElement = document.getElementById(`highscores`);
-    highscoreElement.innerHTML = "";
+    highscoreElement.innerHTML = "<h2>Highscores:</h2>";
+    if (highscores.length === 0) {
+        highscoreElement.innerHTML = "<h2>Highscores:</h2><p>No current scores recorded</p>";
+    }
     highscores.forEach((score, index) => {
         const listItem = document.createElement("li");
         listItem.textContent = `${index + 1}: ${score} seconds`;
@@ -280,17 +283,20 @@ const changeDifficulty = () => {
     }
     displayHighscore(currentDifficulty);
 };
+let gameInitializing = false;
 const gameInteraction = (row, column) => {
-    if (gameWon || gameLost) {
+    if (gameWon || gameLost || gameInitializing) {
         return;
     }
     if (!minesPlaced) {
+        gameInitializing = true;
         const initialCells = randomShape(row, column, randomShapeSize);
         placeMines(initialCells);
         minesPlaced = true;
         initialCells.forEach(([r, c]) => revealCell(r, c));
         startTime = new Date().getTime();
         timeInterval = setInterval(updateTime, 1000);
+        gameInitializing = false;
     }
     else {
         const target = cells[row][column];

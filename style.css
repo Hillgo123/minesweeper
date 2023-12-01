@@ -13,12 +13,21 @@ body {
     height: 100vh;
 }
 
-header {
-    margin: 2vh;
+.options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1vh;
+    width: calc(20 * 30px);
 }
 
-.difficulty-drop-down {
-    
+.difficulty-drop-down,
+#reset,
+#time,
+#hint {
+    flex: 1;
+    text-align: center;
+    margin: 1vh;
 }
 
 .minesweeper {
@@ -47,6 +56,29 @@ header {
     background: #cbc6c6;
 }
 
-#reset {
-    margin-top: 20px;
+li {
+    list-style-type: none;
+}
+
+#highscores {
+    position: fixed;
+    transform: translateY(-100%);
+    top: 50%;
+    left: 5%;
+    display: flex;
+    flex-direction: column;
+    justify-content: left;
+    align-items: left;
+}
+
+#highscores li, #highscores h2 {
+    margin-top: 0.5vh;
+}
+
+#highscores h2 {
+    margin-bottom: 1.5vh;
+}
+
+#highscores li {
+    transform: translateX(-10%);
 }
