@@ -167,7 +167,7 @@ const revealCell = (row: number, column: number) => {
         }
     }
     memo.clear();
-    calculateMineProbabilityUsingBacktracking();
+    calculateMineProbabilityUsingCSP();
 };
 
 /**
@@ -516,6 +516,18 @@ interface CellConstraints {
     constraints: Set<string>;
 }
 
+const clearProbabilities = () => {
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+            if (!cell.classList.contains('revealed')) {
+                delete cell.dataset.probability; // Remove the probability data attribute
+                cell.textContent = ''; // Clear the text content
+            }
+        }
+    }
+};
+
 const calculateConstraintsForCell = (row: number, column: number): CellConstraints => {
     const constraints = new Set<string>();
     const neighbors = getNeighbors(row, column);
@@ -534,7 +546,8 @@ const calculateConstraintsForCell = (row: number, column: number): CellConstrain
 };
 
 const calculateMineProbabilityUsingCSP = () => {
-    const probabilities = new Map<string, number>();
+    clearProbabilities(); // Reset probabilities before calculation
+    let configurationsCount = new Map<string, number>();
     const constraints: CellConstraints[] = [];
 
     // Generate constraints for each revealed cell with a number
@@ -589,6 +602,7 @@ const validateConfiguration = (configuration: Set<string>, constraints: CellCons
 };
 
 const calculateMineProbabilityUsingBacktracking = () => {
+    clearProbabilities(); // Reset probabilities before calculation
     let configurationsCount = new Map<string, number>();
     const cellsToCheck: CellConstraints[] = revealedCells
         .map(([row, column]) => calculateConstraintsForCell(row, column))

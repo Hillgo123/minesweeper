@@ -148,7 +148,7 @@ const revealCell = (row, column) => {
         }
     }
     memo.clear();
-    calculateMineProbabilityUsingBacktracking();
+    calculateMineProbabilityUsingCSP();
 };
 /**
  * Counts the number of adjacent mines to a given cell.
@@ -430,6 +430,17 @@ grid.addEventListener("contextmenu", (event) => {
 resetButton.addEventListener("click", resetGame);
 initializeGrid();
 displayHighscore();
+const clearProbabilities = () => {
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+            if (!cell.classList.contains('revealed')) {
+                delete cell.dataset.probability; // Remove the probability data attribute
+                cell.textContent = ''; // Clear the text content
+            }
+        }
+    }
+};
 const calculateConstraintsForCell = (row, column) => {
     const constraints = new Set();
     const neighbors = getNeighbors(row, column);
@@ -446,7 +457,8 @@ const calculateConstraintsForCell = (row, column) => {
     return { cellKey: `${row},${column}`, constraints };
 };
 const calculateMineProbabilityUsingCSP = () => {
-    const probabilities = new Map();
+    clearProbabilities(); // Reset probabilities before calculation
+    let configurationsCount = new Map();
     const constraints = [];
     // Generate constraints for each revealed cell with a number
     revealedCells.forEach(([row, column]) => {
@@ -496,6 +508,7 @@ const validateConfiguration = (configuration, constraints) => {
     return true;
 };
 const calculateMineProbabilityUsingBacktracking = () => {
+    clearProbabilities(); // Reset probabilities before calculation
     let configurationsCount = new Map();
     const cellsToCheck = revealedCells
         .map(([row, column]) => calculateConstraintsForCell(row, column))
