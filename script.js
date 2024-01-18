@@ -307,9 +307,11 @@ const gameInteraction = (row, column) => {
                 const [r, c] = mine.split(",").map(Number);
                 cells[r][c].style.backgroundColor = "red";
             });
+            cells[row][column].style.backgroundColor = "purple";
         }
         else {
             revealCell(row, column);
+            calculateMineProbabilityUsingBacktracking();
             checkForWin();
         }
     }
@@ -344,6 +346,143 @@ const giveHint = () => {
             startTime -= 5000;
             updateTime();
         }
+    }
+};
+const clearProbabilities = () => {
+    memo.clear();
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+            if (!cell.classList.contains('revealed')) {
+                delete cell.dataset.probability;
+                cell.textContent = '';
+            }
+        }
+    }
+};
+const calculateConstraintsForCell = (row, column) => {
+    const constraints = new Set();
+    const neighbors = getNeighbors(row, column);
+    let mineCount = countAdjacentMines(row, column);
+    neighbors.forEach(([r, c]) => {
+        const cellKey = `${r},${c}`;
+        if (!cells[r][c].classList.contains('revealed') && !cells[r][c].classList.contains('marked')) {
+            constraints.add(cellKey);
+        }
+        else if (cells[r][c].classList.contains('marked')) {
+            mineCount--;
+        }
+    });
+    return { cellKey: `${row},${column}`, constraints };
+};
+const getPermutations = (arr, size) => {
+    function p(t, i) {
+        if (t.length === size)
+            return [t];
+        if (i + 1 > arr.length)
+            return [];
+        return p(t.concat(arr[i]), i + 1).concat(p(t, i + 1));
+    }
+    return p([], 0);
+};
+const validateConfiguration = (configuration, constraints) => {
+    for (const constraint of constraints) {
+        const mineCount = parseInt(cells[parseInt(constraint.cellKey.split(',')[0])][parseInt(constraint.cellKey.split(',')[1])].textContent || '0', 10);
+        const adjacentMineCount = Array.from(constraint.constraints)
+            .filter(key => configuration.has(key))
+            .length;
+        if (mineCount !== adjacentMineCount)
+            return false;
+    }
+    return true;
+};
+const calculateMineProbabilityUsingBacktracking = () => {
+    let configurationsCount = new Map();
+    const cellsToCheck = revealedCells
+        .map(([row, column]) => calculateConstraintsForCell(row, column))
+        .filter(c => c.constraints.size > 0);
+    const backtrack = (currentConfig, index) => {
+        if (index === cellsToCheck.length) {
+            currentConfig.forEach(key => {
+                configurationsCount.set(key, (configurationsCount.get(key) || 0) + 1);
+            });
+            return;
+        }
+        const cellConstraints = cellsToCheck[index];
+        if (cellConstraints.constraints.size === 0) {
+            backtrack(currentConfig, index + 1);
+            return;
+        }
+        const permutationKeys = Array.from(cellConstraints.constraints);
+        const mineCount = parseInt(cells[parseInt(cellConstraints.cellKey.split(',')[0])][parseInt(cellConstraints.cellKey.split(',')[1])].textContent || '0', 10);
+        const permutations = mineCount === 0 ? [[]] : getPermutations(permutationKeys, mineCount);
+        for (const permutation of permutations) {
+            const newConfig = new Set(currentConfig);
+            permutation.forEach(key => newConfig.add(key));
+            if (cachedValidateConfiguration(newConfig, cellsToCheck.slice(0, index + 1))) {
+                backtrack(newConfig, index + 1);
+            }
+        }
+    };
+    backtrack(new Set(), 0);
+    const configurationKeys = Array.from(configurationsCount.keys());
+    const totalConfigurations = configurationKeys.reduce((acc, key) => acc + (configurationsCount.get(key) || 0), 0);
+    configurationKeys.forEach(key => {
+        const [row, column] = key.split(',').map(Number);
+        const cell = cells[row][column];
+        if (!cell.classList.contains('revealed')) {
+            const probability = (configurationsCount.get(key) || 0) / totalConfigurations;
+            cell.dataset.probability = probability.toString();
+            cell.textContent = probability == 0 ? "0" : probability.toFixed(2);
+        }
+    });
+};
+const memo = new Map();
+const configurationToString = (configuration) => {
+    return Array.from(configuration).sort().join(',');
+};
+const cachedValidateConfiguration = (configuration, constraints) => {
+    const configStr = configurationToString(configuration);
+    if (memo.has(configStr)) {
+        return memo.get(configStr);
+    }
+    const isValid = validateConfiguration(configuration, constraints);
+    memo.set(configStr, isValid);
+    return isValid;
+};
+const revealSafestCell = () => {
+    calculateMineProbabilityUsingBacktracking();
+    for (const [row, column] of revealedCells) {
+        const cell = cells[row][column];
+        if (cell.textContent === "") {
+            const neighbors = getNeighbors(row, column);
+            for (const [neighborRow, neighborColumn] of neighbors) {
+                const neighborCell = cells[neighborRow][neighborColumn];
+                if (!neighborCell.classList.contains("revealed") && !neighborCell.dataset.probability) {
+                    gameInteraction(neighborRow, neighborColumn);
+                    return;
+                }
+            }
+        }
+    }
+    calculateMineProbabilityUsingBacktracking();
+    let lowestProbability = 1.0;
+    let safestCellCoordinates = null;
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+            if (!cell.classList.contains("revealed") && cell.dataset.probability) {
+                const probability = parseFloat(cell.dataset.probability);
+                if (probability < lowestProbability) {
+                    lowestProbability = probability;
+                    safestCellCoordinates = [row, column];
+                }
+            }
+        }
+    }
+    if (safestCellCoordinates) {
+        const [row, column] = safestCellCoordinates;
+        gameInteraction(row, column);
     }
 };
 grid.addEventListener("click", (event) => {

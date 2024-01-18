@@ -493,9 +493,11 @@ const gameInteraction = (row: number, column: number) => {
                 const [r, c] = mine.split(",").map(Number);
                 cells[r][c].style.backgroundColor = "red";
             });
+            cells[row][column].style.backgroundColor = "purple"
         } else {
             // Otherwise, reveal the clicked cell and check if the game has been won
             revealCell(row, column);
+            calculateMineProbabilityUsingBacktracking();
             checkForWin();
         }
     }
@@ -553,6 +555,182 @@ const giveHint = () => {
         }
     }
 }
+
+interface CellConstraints {
+    cellKey: string;
+    constraints: Set<string>;
+}
+
+const clearProbabilities = () => {
+    memo.clear();
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+            if (!cell.classList.contains('revealed')) {
+                delete cell.dataset.probability; // Remove the probability data attribute
+                cell.textContent = ''; // Clear the text content
+            }
+        }
+    }
+};
+
+const calculateConstraintsForCell = (row: number, column: number): CellConstraints => {
+    const constraints = new Set<string>();
+    const neighbors = getNeighbors(row, column);
+    let mineCount = countAdjacentMines(row, column);
+
+    neighbors.forEach(([r, c]) => {
+        const cellKey = `${r},${c}`;
+        if (!cells[r][c].classList.contains('revealed') && !cells[r][c].classList.contains('marked')) {
+            constraints.add(cellKey);
+        } else if (cells[r][c].classList.contains('marked')) {
+            mineCount--;
+        }
+    });
+
+    return { cellKey: `${row},${column}`, constraints };
+};
+
+const getPermutations = (arr: number[], size: number): number[][] => {
+    function p(t: number[], i: number): number[][] {
+        if (t.length === size) return [t];
+        if (i + 1 > arr.length) return [];
+        return p(t.concat(arr[i]), i + 1).concat(p(t, i + 1));
+    }
+    return p([], 0);
+};
+
+const validateConfiguration = (configuration: Set<string>, constraints: CellConstraints[]): boolean => {
+    for (const constraint of constraints) {
+        const mineCount = parseInt(cells[parseInt(constraint.cellKey.split(',')[0])][parseInt(constraint.cellKey.split(',')[1])].textContent || '0', 10);
+        const adjacentMineCount = Array.from(constraint.constraints)
+            .filter(key => configuration.has(key))
+            .length;
+        if (mineCount !== adjacentMineCount) return false;
+    }
+    return true;
+};
+
+const calculateMineProbabilityUsingBacktracking = () => {
+    let configurationsCount = new Map<string, number>();
+    const cellsToCheck: CellConstraints[] = revealedCells
+        .map(([row, column]) => calculateConstraintsForCell(row, column))
+        .filter(c => c.constraints.size > 0);
+
+    const backtrack = (currentConfig: Set<string>, index: number) => {
+        if (index === cellsToCheck.length) {
+            currentConfig.forEach(key => {
+                configurationsCount.set(key, (configurationsCount.get(key) || 0) + 1);
+            });
+            return;
+        }
+
+        const cellConstraints = cellsToCheck[index];
+        if (cellConstraints.constraints.size === 0) {
+            backtrack(currentConfig, index + 1);
+            return;
+        }
+
+        const permutationKeys = Array.from(cellConstraints.constraints);
+        const mineCount = parseInt(cells[parseInt(cellConstraints.cellKey.split(',')[0])][parseInt(cellConstraints.cellKey.split(',')[1])].textContent || '0', 10);
+        const permutations = mineCount === 0 ? [[]] : getPermutations(permutationKeys, mineCount);
+
+        for (const permutation of permutations) {
+            const newConfig = new Set(currentConfig);
+            permutation.forEach(key => newConfig.add(key));
+            if (cachedValidateConfiguration(newConfig, cellsToCheck.slice(0, index + 1))) {
+                backtrack(newConfig, index + 1);
+            }
+        }
+    };
+
+    // Start backtracking from the first cell
+    backtrack(new Set<string>(), 0);
+
+    // Calculate probabilities
+    const configurationKeys = Array.from(configurationsCount.keys());
+    const totalConfigurations = configurationKeys.reduce((acc, key) => acc + (configurationsCount.get(key) || 0), 0);
+
+
+    configurationKeys.forEach(key => {
+        const [row, column] = key.split(',').map(Number);
+        const cell = cells[row][column];
+        if (!cell.classList.contains('revealed')) { // Make sure we only update unrevealed cells
+            const probability = (configurationsCount.get(key) || 0) / totalConfigurations;
+            cell.dataset.probability = probability.toString(); // Save probability as a string in the dataset
+
+            // Explicitly check if the probability is zero, and display "0" if it is
+            cell.textContent = probability == 0 ? "0" : probability.toFixed(2);
+        }
+    });
+};
+
+const memo = new Map<string, boolean>();
+
+const configurationToString = (configuration: Set<string>): string => {
+    return Array.from(configuration).sort().join(',');
+};
+
+const cachedValidateConfiguration = (configuration: Set<string>, constraints: CellConstraints[]): boolean => {
+    const configStr = configurationToString(configuration);
+    // Check if the result is already in the cache
+    if (memo.has(configStr)) {
+        return memo.get(configStr)!;
+    }
+
+    // If not, calculate it and store it in the cache
+    const isValid = validateConfiguration(configuration, constraints);
+    memo.set(configStr, isValid);
+    return isValid;
+};
+
+const revealSafestCell = () => {
+    calculateMineProbabilityUsingBacktracking();
+    for (const [row, column] of revealedCells) {
+        const cell = cells[row][column];
+        // Check if the revealed cell has no adjacent mines
+        if (cell.textContent === "") {
+            const neighbors = getNeighbors(row, column);
+            for (const [neighborRow, neighborColumn] of neighbors) {
+                const neighborCell = cells[neighborRow][neighborColumn];
+                // If the neighbor cell is not revealed and has no 'probability' data set...
+                if (!neighborCell.classList.contains("revealed") && !neighborCell.dataset.probability) {
+                    // ...reveal this neighbor cell
+                    gameInteraction(neighborRow, neighborColumn);
+                    return; // Exit after revealing one such neighbor cell
+                }
+            }
+        }
+    }
+
+    // If no adjacent empty cell was revealed, proceed with revealing the safest cell
+    calculateMineProbabilityUsingBacktracking();
+
+    // Initialize variables to keep track of the cell with the lowest probability
+    let lowestProbability = 1.0;
+    let safestCellCoordinates = null;
+
+    // Iterate over unrevealed cells to find the one with the lowest probability
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            const cell = cells[row][column];
+            // Check if the cell has a probability calculated and is not revealed
+            if (!cell.classList.contains("revealed") && cell.dataset.probability) {
+                const probability = parseFloat(cell.dataset.probability);
+                if (probability < lowestProbability) {
+                    lowestProbability = probability;
+                    safestCellCoordinates = [row, column];
+                }
+            }
+        }
+    }
+
+    // If a safest cell was found with the calculated probability, reveal it
+    if (safestCellCoordinates) {
+        const [row, column] = safestCellCoordinates;
+        gameInteraction(row, column);
+    }
+};
 
 // Add a click event listener to the grid
 grid.addEventListener("click", (event) => {
